@@ -1,0 +1,22 @@
+/*
+ * Configuração do tema do Tailwind CSS (v4).
+ * Cada variável --color-* gera as utilities correspondentes
+ * (ex.: bg-primary, text-error, border-info, bg-warning/20).
+ */
+@theme {
+  /* Marca */
+  --color-primary: #29b053;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #ededed;
+  --color-secondary-foreground: #878787;
+
+  /* Semânticas */
+  --color-success: #29b053;
+  --color-success-foreground: #ffffff;
+  --color-error: #b02b28;
+  --color-error-foreground: #ffffff;
+  --color-warning: #b09428;
+  --color-warning-foreground: #000000;
+  --color-info: #2830b0;
+  --color-info-foreground: #ffffff;
+}
