@@ -1,0 +1,72 @@
+@baseUrl = http://localhost:3000/api/trpc
+
+### Listar tarefas (primeira página)
+# @name listTasks
+GET {{baseUrl}}/tasks.list?input={"json":{"limit":5}}
+
+### Listar tarefas (próxima página, usando o nextCursor da requisição anterior)
+GET {{baseUrl}}/tasks.list?input={"json":{"limit":5,"cursor":"{{listTasks.response.body.$.result.data.json.nextCursor}}"}}
+
+### Criar tarefa
+# @name createTask
+POST {{baseUrl}}/tasks.create
+Content-Type: application/json
+
+{
+  "json": {
+    "titulo": "Estudar tRPC",
+    "descricao": "Ler a documentação de routers e procedures"
+  }
+}
+
+### Criar tarefa sem título (erro 400 - BAD_REQUEST)
+POST {{baseUrl}}/tasks.create
+Content-Type: application/json
+
+{
+  "json": {
+    "titulo": "   "
+  }
+}
+
+### Atualizar tarefa
+POST {{baseUrl}}/tasks.update
+Content-Type: application/json
+
+{
+  "json": {
+    "id": "{{createTask.response.body.$.result.data.json.id}}",
+    "titulo": "Estudar tRPC e React Query"
+  }
+}
+
+### Atualizar tarefa inexistente (erro 404 - NOT_FOUND)
+POST {{baseUrl}}/tasks.update
+Content-Type: application/json
+
+{
+  "json": {
+    "id": "00000000-0000-4000-8000-000000000000",
+    "titulo": "Não existe"
+  }
+}
+
+### Deletar tarefa
+POST {{baseUrl}}/tasks.delete
+Content-Type: application/json
+
+{
+  "json": {
+    "id": "{{createTask.response.body.$.result.data.json.id}}"
+  }
+}
+
+### Deletar tarefa inexistente (erro 404 - NOT_FOUND)
+POST {{baseUrl}}/tasks.delete
+Content-Type: application/json
+
+{
+  "json": {
+    "id": "00000000-0000-4000-8000-000000000000"
+  }
+}
