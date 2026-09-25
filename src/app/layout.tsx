@@ -1,3 +1,6 @@
+import { Header } from "../components/Header";
+import { ToastProvider } from "../components/Toast";
+import "../input.css";
 import { TRPCReactProvider } from "../trpc/client";
 
 export default function RootLayout({
@@ -8,7 +11,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <ToastProvider>
+            <Header />
+            {children}
+          </ToastProvider>
+        </TRPCReactProvider>
       </body>
     </html>
   );
