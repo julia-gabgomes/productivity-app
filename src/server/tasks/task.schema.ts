@@ -19,10 +19,11 @@ export const updateTaskInput = createTaskInput
   .partial()
   .extend({ id: taskSchema.shape.id });
 
+export const getTaskInput = taskSchema.pick({ id: true });
+
 export const deleteTaskInput = taskSchema.pick({ id: true });
 
 export const listTasksInput = z.object({
-  // O nome "cursor" é exigido pelo infiniteQueryOptions do tRPC.
   cursor: z.uuid().nullish(),
   limit: z.number().int().min(1).max(50).default(10),
 });

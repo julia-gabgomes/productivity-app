@@ -10,7 +10,6 @@ import { useToast } from "./Toast";
 
 type FieldErrors = { titulo?: string[]; descricao?: string[] };
 
-// Sem `task`, o formulário cadastra uma nova tarefa; com `task`, edita a existente.
 export const TaskForm = ({ task }: { task?: Task }) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -54,7 +53,6 @@ export const TaskForm = ({ task }: { task?: Task }) => {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    // Mesmo schema Zod usado pelo backend: bloqueia o envio sem título.
     const result = createTaskInput.safeParse({ titulo, descricao });
     if (!result.success) {
       setFieldErrors(z.flattenError(result.error).fieldErrors);
