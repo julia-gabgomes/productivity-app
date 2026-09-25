@@ -17,6 +17,7 @@ Desenvolver uma aplicação web de gerenciamento de tarefas simples e funcional 
 - **Validação de Esquemas**: Zod (v4.6.5)
 - **Serialização**: SuperJSON (v2.2.6) — transformer do tRPC que preserva tipos como `Date` entre servidor e cliente
 - **Fronteira servidor/cliente**: `server-only` / `client-only` — impedem a importação de módulos no ambiente errado
+- **Estilização**: Tailwind CSS (v4.3.3) via `@tailwindcss/postcss`
 - **Formatação de Código**: Prettier (v3.9.9)
 
 ---
@@ -45,30 +46,48 @@ productivity-app/
 │   ├── app/                              # App Router do Next.js
 │   │   ├── api/trpc/[trpc]/
 │   │   │   └── route.ts                  # Endpoint HTTP do tRPC (Route Handler)
-│   │   ├── layout.tsx                    # Layout raiz (envolve a aplicação no TRPCReactProvider)
-│   │   └── page.tsx                      # Página inicial (placeholder)
+│   │   ├── tasks/
+│   │   │   ├── page.tsx                  # Listagem (Server Component): prefetch da 1ª página + HydrationBoundary (SSR)
+│   │   │   ├── task-list.tsx             # Client Component: infinite scroll (IntersectionObserver) e exclusão com toast
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx              # Página de criação de tarefa (usa TaskForm)
+│   │   │   └── [id]/edit/
+│   │   │       └── page.tsx              # Página de edição (busca via tasks.byId; NOT_FOUND/BAD_REQUEST → notFound())
+│   │   ├── layout.tsx                    # Layout raiz (TRPCReactProvider > ToastProvider > Header + children), importa input.css
+│   │   └── page.tsx                      # Página inicial: redireciona para /tasks
+│   ├── components/                       # Componentes de UI
+│   │   ├── icons/                        # Ícones SVG (Close, Logo, Pencil, Plus, Trash)
+│   │   ├── Box.tsx                       # Contêiner visual (borda, fundo branco, sombra)
+│   │   ├── Card.tsx                      # Card de tarefa (título, descrição, data, links/botões de editar e excluir)
+│   │   ├── Header.tsx                    # Cabeçalho com logo e botão "Criar nova tarefa"
+│   │   ├── TaskForm.tsx                  # Formulário de criar/editar (validação Zod no cliente + erros do backend)
+│   │   └── Toast.tsx                     # ToastProvider, componente Toast e hook useToast (success/warning/error)
 │   ├── server/                           # Camada de domínio/dados (independente do tRPC)
 │   │   └── tasks/
 │   │       ├── task.schema.ts            # Schemas Zod e tipos (Task, inputs de create/update/delete/list)
 │   │       ├── task.repository.ts        # Interface TaskRepository (contrato de acesso aos dados)
 │   │       ├── task.memory-repository.ts # Implementação em memória (Map singleton em globalThis)
 │   │       └── task.errors.ts            # Erros de domínio (TaskNotFoundError)
-│   └── trpc/                             # Configuração e routers do tRPC
-│       ├── routers/
-│       │   ├── _app.ts                   # Router raiz (combina os sub-routers)
-│       │   └── tasks.ts                  # Router de tarefas: list, byId, create, update, delete
-│       ├── client.tsx                    # Cliente tRPC / Provider no frontend (superjson)
-│       ├── init.ts                       # Inicialização do tRPC: contexto (injeta taskRepository) e procedures
-│       ├── query-client.ts               # TanStack Query Client (dehydrate/hydrate com superjson)
-│       └── server.tsx                    # Proxy de opções tRPC para Server Components (SSR)
+│   ├── trpc/                             # Configuração e routers do tRPC
+│   │   ├── routers/
+│   │   │   ├── _app.ts                   # Router raiz (combina os sub-routers)
+│   │   │   └── tasks.ts                  # Router de tarefas: list, byId, create, update, delete
+│   │   ├── client.tsx                    # Cliente tRPC / Provider no frontend (superjson)
+│   │   ├── init.ts                       # Inicialização do tRPC: contexto (injeta taskRepository) e procedures
+│   │   ├── query-client.ts               # TanStack Query Client (dehydrate/hydrate com superjson)
+│   │   └── server.tsx                    # Proxy de opções tRPC para Server Components (SSR)
+│   ├── input.css                         # Entrada do Tailwind CSS (importa tailwindcss e theme.css)
+│   ├── theme.css                         # Tema do Tailwind v4 (@theme: cores primary, secondary, success, error, warning, info)
+│   └── css.d.ts                          # Declaração de tipos para imports de arquivos .css
 ├── request.http                          # Requisições de exemplo às rotas de tasks (REST Client do VS Code)
+├── postcss.config.mjs                    # Configuração do PostCSS (plugin @tailwindcss/postcss)
 ├── .editorconfig                         # Configurações do editor
 ├── .nvmrc                                # Versão do Node
 ├── package.json                          # Dependências e scripts do projeto
 └── tsconfig.json                         # Configurações do TypeScript (modo `strict` ativado)
 ```
 
-**Planejado (ainda não implementado)**: rota `src/app/tasks/` (página de tarefas com SSR e infinite scroll), `src/components/` (componentes de UI) e `src/helpers/` (funções utilitárias).
+**Planejado (ainda não implementado)**: `src/helpers/` (funções utilitárias).
 
 ### Fluxo de uma requisição
 
@@ -82,6 +101,13 @@ Server Component (server.tsx) ────────────────�
                                                           ▼
                      server/tasks/task.memory-repository.ts
 ```
+
+### Fluxo do Frontend
+
+- **Listagem (SSR)**: `tasks/page.tsx` (Server Component, `force-dynamic`) faz `prefetchInfiniteQuery` de `tasks.list` e entrega o estado desidratado via `HydrationBoundary`. `task-list.tsx` consome os dados já hidratados com `useSuspenseInfiniteQuery` e busca as próximas páginas com um sentinela observado por `IntersectionObserver`.
+- **Mutações**: `TaskForm` (criar/editar) e `task-list.tsx` (excluir) usam `useMutation` com `trpc.tasks.*.mutationOptions`. Após o sucesso/erro invalidam `trpc.tasks.list.pathKey()` (ou `trpc.tasks.pathKey()`) para recarregar a lista, e exibem feedback via `useToast`.
+- **Validação do formulário**: `TaskForm` valida com o `createTaskInput` (compartilhado de `task.schema.ts`) antes de enviar, bloqueando o envio sem título; falhas do backend aparecem como toast.
+- **Estilos**: Tailwind CSS v4 (via `@tailwindcss/postcss`). As cores da marca e semânticas ficam em `theme.css` e geram utilities como `bg-primary` e `text-error`.
 
 ### Convenções do Backend
 
